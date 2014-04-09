@@ -19,4 +19,31 @@
 \begin{document}
 %\maketitle
 \input{./title.tex}
+\chapter*{Danksagung}
+\tableofcontents
+\begin{abstract}
+
+\end{abstract}
+\chapter*{Einleitung}
+Ein wichtiger Teil der Systemprogrammierung ist das Concurrent Programming. Dabei steht nicht die Parallelisierung im Vordergrund, sondern das Problem, von Zugriffen auf Ressourcen und die damit auftretenden Schwierigkeiten. Gleichzeitige Bearbeitungen von Ressourcen können, je nach ausgeführter Arbeit, zu schwerwiegenden Problemen führen. Wird zum Beispiel eine Datei gelöscht, obwohl die Datei momentan an einem anderen Ort geöffnet ist und das System dies nicht bemerkt, tritt ein Konflikt auf. Soll die Datei nun gelöscht werden und der Bearbeiter verliert den Zugriff, oder soll die Datei einfach nicht gelöscht werden, mit dem Vermerk, dass die Datei geöffnet ist?
+\\
+In dieser Arbeit soll nun ein Dateiserver in C programmiert werden, der genau solche Probleme abfangen soll. Dabei gilt, dass der Server nach dem Schema CRUDL funktionieren soll. CRUDL steht für:
+\begin{itemize}
+	\item CREATE
+	\item READ
+	\item UPDATE
+	\item DELETE
+	\item LIST
+\end{itemize}
+Je nach aufgerufenem Task, darf eine Datei nicht mehr zugreifbar sein.
+\\
+\\
+Die Arbeit soll keine realen Dateien verarbeiten können. Das Ziel liegt in der Realisierung des CRUDL-Systems. Die Dateien selber werden in einem Shared-Memory gespeichert (nur die Dateinamen). Sobald der Server gestoppt wird, gehen die Dateien im Shared-Memory verloren.
+\chapter*{Ausgangslage}
+
+\chapter*{Realisierung}
+\section{Netzwerk}
+\subsection{Testing}
+\chapter*{Schwierigkeiten}
+\chapter*{Fazit}
 \end{document}
