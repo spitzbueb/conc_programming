@@ -15,13 +15,87 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-key_t key;
-int shmid;
+key_t shmkey, semkey;
+int shmid, shmid_cleanup;
+int semid, semid_cleanup;
 
+const char *REF_FILE = "./shm_sem_ref.dat";
+
+int create_shm(key_t key, const char *txt, const char *etxt, int flags)
+{
+	int result = shmget(key, 256, flags | 0600);
+	if (result < 0)
+	{
+		printf("%s", etxt);
+		exit(1);
+	}
+	return result;
+}
+
+int create_sem(key_t key, const int sem_size, const char *txt, const char *etxt, int flags)
+{
+	int result = semget(key, sem_size, flags | 0600);
+	if (result < 0)
+	{
+		printf("%s", etxt);
+		exit(1);
+	}
+	
+	return result;
+}
+
+int setup_sem(int semaphore_id, const char *txt)
+{
+	int semval[1] = { 1 };
+	int retcode = semctl(semaphore_id, 1, SETALL, &semval);
+	if(retcode < 0)
+	{
+		printf("%s", txt);
+		exit(1);
+	}
+	return retcode;
+}
 
 int main(int argc, char *argv[])
 {
 	
+/* Aufbau Shared-Memory */
+	FILE *fptr;
+	fptr = fopen(REF_FILE,"rb+");
+	if(fptr == NULL)
+	{
+		printf("CREATING REF_FILE!\n");
+		fptr = fopen(REF_FILE, "wb");
+	}
+	
+	shmkey = ftok(REF_FILE,1);
+	if(shmkey < 0)
+	{
+		perror("ERROR FTOK SHM!\n");
+		exit(1);
+	}
+	
+	printf("Setting up SHM!\n");
+	shmid = create_shm(shmkey, "create","SHMGET FAILED!\n",IPC_CREAT);
+	shmid_cleanup = shmid;
+	
+/* Ende Aufbau Shared-Memory */
+
+/* Aufbau Semaphore */
+	semkey = ftok(REF_FILE,2);
+	if(semkey < 0)
+	{
+		perror("ERROR FTOK SEMAPHOR!\n");
+		exit(1);
+	}
+	
+	printf("Setting up Semaphor!\n");
+	semid = create_sem(semkey, 10, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
+	semid_cleanup = semid;
+	setup_sem(semid,"SEMAPHORE SETUP FAILED!\n");
+/* Ende Aufbau Semaphor */
+
+/* Aufbau Netzwek-Socket */	
 	int sockfd, clntLen, portno, newsockfd;
 	char buffer[256];
 	struct sockaddr_in server_addr, clnt_addr;
@@ -49,6 +123,7 @@ int main(int argc, char *argv[])
 	
 	listen(sockfd,100);
 	clntLen = sizeof(clnt_addr);
+/* Ende Aufbau Netzwerk-Socket */
 	
 	while(1)
 	{
@@ -79,17 +154,76 @@ int main(int argc, char *argv[])
 					perror("ERROR READING SOCKET!\n");
 					exit(1);
 				}
-			
-				printf("Your Message: %s\n", buffer);
-			
-				retcode = write(newsockfd, buffer, strlen(buffer));
-				if(retcode < 0)
-				{
-					printf("ERROR WRITING SOCKET!\n");
-					exit(1);
-				}
 				
-				printf("DONE!\n");
+				char *list = malloc(5);
+				char *create = malloc(7);
+				char *read = malloc(5);
+				char *update = malloc(7);
+				char *delete = malloc(7);
+				
+				strncpy(list,buffer,4);
+				strncpy(create,buffer,6);
+				strncpy(read,buffer,4);
+				strncpy(update,buffer,6);
+				strncpy(delete,buffer,6);
+				
+				if(strcmp(list,"LIST") == 0)
+				{
+					retcode = write(newsockfd,"Your Choice was LIST!\n",23);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+				else if(strcmp(create,"CREATE") == 0)
+				{
+					retcode = write(newsockfd,"Your Choice was CREATE!\n",25);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+				else if(strcmp(read,"READ") == 0)
+				{
+					retcode = write(newsockfd,"Your Choice was READ!\n",23);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+				else if(strcmp(update,"UPDATE") == 0)
+				{
+					retcode = write(newsockfd,"Your Choice was UPDATE!\n",25);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+				else if(strcmp(delete,"DELETE") == 0)
+				{
+					retcode = write(newsockfd,"Your Choice was DELETE!\n",25);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+				else
+				{
+					retcode = write(newsockfd,"Action not known!\n",19);
+					if(retcode < 0)
+					{
+						perror("ERROR WRITING SOCKET!\n");
+						exit(1);
+					}
+				}
+						
+				
+				
 			}
 		}
 	}
