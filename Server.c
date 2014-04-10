@@ -46,8 +46,8 @@ int create_sem(key_t key, const int sem_size, const char *txt, const char *etxt,
 
 int setup_sem(int semaphore_id, const char *txt)
 {
-	int semval[1] = { 1 };
-	int retcode = semctl(semaphore_id, 1, SETALL, &semval);
+	int semval[1] = { 10 };
+	int retcode = semctl(semaphore_id, 1, SETVAL, &semval);
 	if(retcode < 0)
 	{
 		printf("%s", txt);
