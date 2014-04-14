@@ -15,11 +15,43 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+struct datei
+{
+	char *name;
+	int size;
+	char *content;
+};
+
 key_t shmkey, semkey;
 int shmid, shmid_cleanup;
 int semid, semid_cleanup;
 
 const char *REF_FILE = "./shm_sem_ref.dat";
+
+void cleanup()
+{
+	if (shmid_cleanup > 0)
+	{
+		int retcode = shmctl(shmid_cleanup, IPC_RMID, NULL);
+		shmid_cleanup = 0;
+		
+		if(retcode < 0)
+		{
+			printf("Error cleaning Shared-Memory!\n");
+		}
+	}
+	
+	if (semid_cleanup > 0)
+	{
+		int retcode = semctl(semid_cleanup, 0, IPC_RMID, NULL);
+		semid_cleanup = 0;
+		
+		if(retcode < 0)
+		{
+			printf("Error cleaning Semaphore!\n");
+		}
+	}
+}
 
 int create_shm(key_t key, const char *txt, const char *etxt, int flags)
 {
@@ -40,24 +72,22 @@ int create_sem(key_t key, const int sem_size, const char *txt, const char *etxt,
 		printf("%s", etxt);
 		exit(1);
 	}
-	
+	printf("SemID=%d, key=%ld\n", result, (long) key);
 	return result;
 }
 
-int setup_sem(int semaphore_id, const char *txt)
+void sig_handler(int sig)
 {
-	int semval[1] = { 10 };
-	int retcode = semctl(semaphore_id, 1, SETVAL, &semval);
-	if(retcode < 0)
-	{
-		printf("%s", txt);
-		exit(1);
-	}
-	return retcode;
+	cleanup();
+	exit(0);
 }
 
 int main(int argc, char *argv[])
 {
+	int retcode;
+	
+/* SIGINT abfangen */
+	signal(SIGINT, sig_handler);
 	
 /* Aufbau Shared-Memory */
 	FILE *fptr;
@@ -82,7 +112,7 @@ int main(int argc, char *argv[])
 /* Ende Aufbau Shared-Memory */
 
 /* Aufbau Semaphore */
-	semkey = ftok(REF_FILE,2);
+	semkey = ftok(REF_FILE,1);
 	if(semkey < 0)
 	{
 		perror("ERROR FTOK SEMAPHOR!\n");
@@ -90,16 +120,36 @@ int main(int argc, char *argv[])
 	}
 	
 	printf("Setting up Semaphor!\n");
-	semid = create_sem(semkey, 10, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
+	semid = create_sem(semkey, 1, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
 	semid_cleanup = semid;
-	setup_sem(semid,"SEMAPHORE SETUP FAILED!\n");
+	short semval[1];
+	semval[0] = (short) 10;
+	retcode = semctl(semid, 1, SETALL, &semval);
+	
+	if (retcode < 0)
+	{
+		perror("ERROR CHANGING SEMAPHORE!\n");
+		cleanup();
+		exit(1);
+	}
+	
+	struct sembuf sem_one, sem_all;
+	
+	sem_one.sem_num = 0;
+	sem_one.sem_op = -1;
+	sem_one.sem_flg = SEM_UNDO;
+	
+	sem_all.sem_num = 0;
+	sem_all.sem_op = -10;
+	sem_all.sem_flg = SEM_UNDO;
+	
 /* Ende Aufbau Semaphor */
 
 /* Aufbau Netzwek-Socket */	
 	int sockfd, clntLen, portno, newsockfd;
 	char buffer[256];
 	struct sockaddr_in server_addr, clnt_addr;
-	int retcode;
+	
 	
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	
@@ -160,6 +210,8 @@ int main(int argc, char *argv[])
 				char *read = malloc(5);
 				char *update = malloc(7);
 				char *delete = malloc(7);
+				char *temp;
+				int counter = 0;
 				
 				strncpy(list,buffer,4);
 				strncpy(create,buffer,6);
@@ -184,6 +236,19 @@ int main(int argc, char *argv[])
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
+					
+					strncpy(temp, buffer+7,strlen(buffer));
+					
+					printf("%s\n",temp);
+					
+					while(temp[counter] != ' ')
+					{
+						counter++;
+					}
+					
+					printf("Zeichen zum Space: %i",counter);
+					
+					
 				}
 				else if(strcmp(read,"READ") == 0)
 				{
