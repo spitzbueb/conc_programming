@@ -25,8 +25,16 @@ struct datei
 key_t shmkey, semkey;
 int shmid, shmid_cleanup;
 int semid, semid_cleanup;
+int sockfd, newsockfd;
+struct datei dateien[100];
 
 const char *REF_FILE = "./shm_sem_ref.dat";
+
+void close_socket()
+{
+	close(sockfd);
+	close(newsockfd);
+}
 
 void cleanup()
 {
@@ -79,6 +87,7 @@ int create_sem(key_t key, const int sem_size, const char *txt, const char *etxt,
 void sig_handler(int sig)
 {
 	cleanup();
+	close_socket();
 	exit(0);
 }
 
@@ -146,7 +155,7 @@ int main(int argc, char *argv[])
 /* Ende Aufbau Semaphor */
 
 /* Aufbau Netzwek-Socket */	
-	int sockfd, clntLen, portno, newsockfd;
+	int clntLen, portno;
 	char buffer[256];
 	struct sockaddr_in server_addr, clnt_addr;
 	
@@ -205,21 +214,13 @@ int main(int argc, char *argv[])
 					exit(1);
 				}
 				
-				char *list = malloc(5);
-				char *create = malloc(7);
-				char *read = malloc(5);
-				char *update = malloc(7);
-				char *delete = malloc(7);
-				char *temp;
-				int counter = 0;
+				char delimiter[] = " ,;:";
 				
-				strncpy(list,buffer,4);
-				strncpy(create,buffer,6);
-				strncpy(read,buffer,4);
-				strncpy(update,buffer,6);
-				strncpy(delete,buffer,6);
+				char *befehl = strtok(buffer,delimiter);
+				char *dateiname = strtok(NULL,delimiter);
+				char *groesse = strtok(NULL,delimiter);
 				
-				if(strcmp(list,"LIST") == 0)
+				if(strcmp(befehl,"LIST") == 0)
 				{
 					retcode = write(newsockfd,"Your Choice was LIST!\n",23);
 					if(retcode < 0)
@@ -227,30 +228,38 @@ int main(int argc, char *argv[])
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
+					
+					int zaehler=0;
+					
+					while(dateien[zaehler].name != NULL)
+					{
+						printf("%s mit Grösse %i\n",dateien[zaehler].name,dateien[zaehler].size);
+						zaehler++;
+					}
 				}
-				else if(strcmp(create,"CREATE") == 0)
+				else if(strcmp(befehl,"CREATE") == 0)
 				{
 					retcode = write(newsockfd,"Your Choice was CREATE!\n",25);
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
-					}
+					}		
 					
-					strncpy(temp, buffer+7,strlen(buffer));
+					int zaehler = 0;
 					
-					printf("%s\n",temp);
-					
-					while(temp[counter] != ' ')
+					while(dateien[zaehler].name != NULL)
 					{
-						counter++;
+						zaehler++;
 					}
 					
-					printf("Zeichen zum Space: %i",counter);
+					printf("%i\n", zaehler);
 					
+					dateien[zaehler].name = dateiname;
+					dateien[zaehler].size = (int) groesse;
 					
 				}
-				else if(strcmp(read,"READ") == 0)
+				else if(strcmp(befehl,"READ") == 0)
 				{
 					retcode = write(newsockfd,"Your Choice was READ!\n",23);
 					if(retcode < 0)
@@ -259,7 +268,7 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 				}
-				else if(strcmp(update,"UPDATE") == 0)
+				else if(strcmp(befehl,"UPDATE") == 0)
 				{
 					retcode = write(newsockfd,"Your Choice was UPDATE!\n",25);
 					if(retcode < 0)
@@ -268,7 +277,7 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 				}
-				else if(strcmp(delete,"DELETE") == 0)
+				else if(strcmp(befehl,"DELETE") == 0)
 				{
 					retcode = write(newsockfd,"Your Choice was DELETE!\n",25);
 					if(retcode < 0)
