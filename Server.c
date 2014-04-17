@@ -95,6 +95,13 @@ int main(int argc, char *argv[])
 {
 	int retcode;
 	
+	int x;
+	
+	for(x=0;x<100;x++)
+	{
+		dateien[x].name = "empty";
+	}
+	
 /* SIGINT abfangen */
 	signal(SIGINT, sig_handler);
 	
@@ -207,6 +214,8 @@ int main(int argc, char *argv[])
 			/* CHILD PART */
 			while(1)
 			{
+				
+				int zaehler = 0;
 				retcode = read(newsockfd, buffer, 255);
 				if(retcode < 0)
 				{
@@ -214,7 +223,7 @@ int main(int argc, char *argv[])
 					exit(1);
 				}
 				
-				char delimiter[] = " ,;:";
+				char delimiter[] = " ,;:\n";
 				
 				char *befehl = strtok(buffer,delimiter);
 				char *dateiname = strtok(NULL,delimiter);
@@ -229,13 +238,13 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
-					int zaehler=0;
-					
-					while(dateien[zaehler].name != NULL)
+					for(x=0;x<100;x++)
 					{
-						printf("%s mit Grösse %i\n",dateien[zaehler].name,dateien[zaehler].size);
-						zaehler++;
+						printf("%s\n",dateien[x].name);
 					}
+					
+					printf("ENDE\n");
+					
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
 				{
@@ -244,19 +253,18 @@ int main(int argc, char *argv[])
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
-					}		
-					
-					int zaehler = 0;
-					
-					while(dateien[zaehler].name != NULL)
-					{
-						zaehler++;
 					}
 					
-					printf("%i\n", zaehler);
+					x=0;
 					
-					dateien[zaehler].name = dateiname;
-					dateien[zaehler].size = (int) groesse;
+					while(strcmp(dateien[x].name,"empty") != 0)
+					{
+						printf("%i %s\n",x,dateien[x].name);
+						x++;
+					}
+					
+					dateien[99-x].name = dateiname;
+					
 					
 				}
 				else if(strcmp(befehl,"READ") == 0)

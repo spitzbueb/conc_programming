@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 	char buffer[256];
 	
 	portno = 6666;
-	servIP="192.168.74.129";
+	servIP="127.0.0.1";
 	
 	sockfd = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
 	if(sockfd < 0)
