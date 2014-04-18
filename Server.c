@@ -26,7 +26,8 @@ key_t shmkey, semkey;
 int shmid, shmid_cleanup;
 int semid, semid_cleanup;
 int sockfd, newsockfd;
-struct datei dateien[100];
+
+int x = 0;
 
 const char *REF_FILE = "./shm_sem_ref.dat";
 
@@ -95,13 +96,6 @@ int main(int argc, char *argv[])
 {
 	int retcode;
 	
-	int x;
-	
-	for(x=0;x<100;x++)
-	{
-		dateien[x].name = "empty";
-	}
-	
 /* SIGINT abfangen */
 	signal(SIGINT, sig_handler);
 	
@@ -124,6 +118,8 @@ int main(int argc, char *argv[])
 	printf("Setting up SHM!\n");
 	shmid = create_shm(shmkey, "create","SHMGET FAILED!\n",IPC_CREAT);
 	shmid_cleanup = shmid;
+	
+	struct datei *dateien = (struct datei *) shmat(shmid,NULL,0);
 	
 /* Ende Aufbau Shared-Memory */
 
@@ -238,12 +234,11 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
-					for(x=0;x<100;x++)
-					{
-						printf("%s\n",dateien[x].name);
-					}
 					
-					printf("ENDE\n");
+					printf("%s\n%s\n", dateien[0].name,dateien[1].name);
+					
+					printf("----------------------------------\n");
+					
 					
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
@@ -255,16 +250,18 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
-					x=0;
 					
-					while(strcmp(dateien[x].name,"empty") != 0)
+					if(dateien[x].name != NULL)
 					{
-						printf("%i %s\n",x,dateien[x].name);
 						x++;
 					}
-					
-					dateien[99-x].name = dateiname;
-					
+					else
+					{
+						printf("%d\n",x);
+						dateien[x].name = dateiname;
+						x++;
+					}
+						
 					
 				}
 				else if(strcmp(befehl,"READ") == 0)
