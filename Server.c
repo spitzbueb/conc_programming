@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
 	shmid_cleanup = shmid;
 	
 	struct datei *dateien = (struct datei *) shmat(shmid,NULL,0);
-	dateien[0].name = "ENDE";
 /* Ende Aufbau Shared-Memory */
 
 /* Aufbau Semaphore */
@@ -227,16 +226,16 @@ int main(int argc, char *argv[])
 				
 				if(strcmp(befehl,"LIST") == 0)
 				{
+					retcode = write(newsockfd,"OK\n",3);
 					char *message = "Dateien: ";
 					int counter = 0;
 					
-					while(strcmp(dateien[counter].name,"ENDE")!=0)
+					while(dateien[counter].name != NULL)
 					{
 						printf("%s\n",dateien[counter].name);
 						counter++;
 					}
 					
-					retcode = write(newsockfd,message,strlen(message));
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
@@ -247,26 +246,23 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
 				{
+					retcode = write(newsockfd,"OK\n",3);
 					int counter = 0;
 					
+					printf("Vor While\n");
 					while(dateien[counter].name != NULL)
 					{
-						if(strcmp(dateien[counter].name,"ENDE") == 0)
-						{
-							printf("Ende gefunden!\n");
-							dateien[counter].name = NULL;
-							dateien[counter+1].name = "ENDE";
-						}
-						else
-						{
-							counter++;
-						}
+						printf("In While\n");
+						counter++;
+						printf("%i\n",counter);
 					}
+					printf("Nach While\n");
 					
-					dateien[counter].name = dateiname;
+					dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
+					strcpy(dateien[counter].name,dateiname);
 					dateien[counter].size = atoi(groesse);
+					printf("Done\n");
 					
-					retcode = write(newsockfd,"Datei wurde erstellt\n",22);
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
@@ -276,14 +272,13 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"READ") == 0)
 				{
+					retcode = write(newsockfd,"OK\n",3);
 					int counter=0;
 					
 					while(strcmp(dateiname,dateien[counter].name) != 0)
 					{
 						counter++;
 					}
-					
-					retcode = write(newsockfd,dateien[counter].content,sizeof(dateien[counter].content));
 					
 					if(retcode < 0)
 					{
@@ -293,25 +288,21 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"UPDATE") == 0)
 				{
+					retcode = write(newsockfd,"OK\n",3);
 					int counter = 0;
 					while(strcmp(dateiname,dateien[counter].name) != 0)
 					{
 						counter++;
 					}
 					
-					retcode = write(newsockfd,"Bitte neuen Inhalt eingeben!\n",30);
-					if(retcode < 0)
-					{
-						perror("ERROR WRITING SOCKET!\n");
-						exit(1);
-					}
 					retcode = read(newsockfd,buffer,255);
 					if(retcode < 0)
 					{
 						perror("ERROR READING SOCKET!\n");
 						exit(1);
 					}
-					dateien[counter].content = buffer;
+					dateien[counter].content = (char*)calloc(strlen(buffer),sizeof(char));
+					strcpy(dateien[counter].content,buffer);
 					retcode = write(newsockfd,"Gespeichert!\n",14);
 					if(retcode < 0)
 					{
@@ -328,9 +319,8 @@ int main(int argc, char *argv[])
 						counter++;
 					}
 					
-					dateien[counter].name = NULL;
-					dateien[counter].size = 0;
-					dateien[counter].content = NULL;
+					strcpy(dateien[counter].name,"");
+					strcpy(dateien[counter].content,"");
 					
 					retcode = write(newsockfd,"Datei gelöscht!\n",17);
 					if(retcode < 0)
@@ -347,9 +337,7 @@ int main(int argc, char *argv[])
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
-				}
-						
-				
+				}			
 				
 			}
 		}
