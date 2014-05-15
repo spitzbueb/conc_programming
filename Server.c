@@ -28,7 +28,6 @@ key_t shmkey, semkey;
 int shmid, shmid_cleanup;
 int semid, semid_cleanup;
 int sockfd, newsockfd;
-
 int x = 0;
 
 const char *REF_FILE = "./shm_sem_ref.dat";
@@ -286,25 +285,28 @@ int main(int argc, char *argv[])
 				else if(strcmp(befehl,"READ") == 0)
 				{
 					int counter=0;
-					char *message;
-					
+					char message[256];
+												
+					printf("vor schlaufe\n");
 					while(dateien[counter].name != NULL)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
 							sprintf(message,"FILECONTENT %s %d\n%s\n",dateien[counter].name,dateien[counter].size,dateien[counter].content);
+							printf("Nach sprintf\n");
 							break;
 						}
 						else
 						{
-							message = "NOSUCHFILE\n";
+							strcpy(message,"NOSUCHFILE\n");
 						}
 						counter++;
 					}
 					
 					
 					retcode = write(newsockfd,message,strlen(message));
-					
+					printf("Done\n");
+					message[0] = '\0';
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
