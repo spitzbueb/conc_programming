@@ -14,12 +14,14 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <semaphore.h>
 
 struct datei
 {
 	char *name;
 	int size;
 	char *content;
+	short semval[1];
 };
 
 key_t shmkey, semkey;
@@ -96,6 +98,7 @@ int main(int argc, char *argv[])
 {
 	int retcode;
 	
+	
 /* SIGINT abfangen */
 	signal(SIGINT, sig_handler);
 	
@@ -135,14 +138,6 @@ int main(int argc, char *argv[])
 	semid_cleanup = semid;
 	short semval[1];
 	semval[0] = (short) 10;
-	retcode = semctl(semid, 1, SETALL, &semval);
-	
-	if (retcode < 0)
-	{
-		perror("ERROR CHANGING SEMAPHORE!\n");
-		cleanup();
-		exit(1);
-	}
 	
 	struct sembuf sem_one, sem_all;
 	
@@ -226,16 +221,15 @@ int main(int argc, char *argv[])
 				
 				if(strcmp(befehl,"LIST") == 0)
 				{
-					retcode = write(newsockfd,"OK\n",3);
-					char *message = "Dateien: ";
 					int counter = 0;
 					
 					while(dateien[counter].name != NULL)
 					{
-						printf("%s\n",dateien[counter].name);
+						printf("%d\n",counter);
 						counter++;
 					}
 					
+	
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
@@ -246,22 +240,41 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
 				{
-					retcode = write(newsockfd,"OK\n",3);
 					int counter = 0;
+					int status = 0;
+					char *message;
 					
-					printf("Vor While\n");
 					while(dateien[counter].name != NULL)
 					{
-						printf("In While\n");
-						counter++;
-						printf("%i\n",counter);
+						if(strcmp(dateien[counter].name,dateiname) != 0)
+						{
+							counter++;
+						}
+						else
+						{
+							status = 1;
+							break;
+						}
 					}
-					printf("Nach While\n");
 					
-					dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
-					strcpy(dateien[counter].name,dateiname);
-					dateien[counter].size = atoi(groesse);
-					printf("Done\n");
+					if(status == 1)
+					{
+						message = "FILEEXISTS\n";
+					}
+					else
+					{
+						dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
+						strcpy(dateien[counter].name,dateiname);
+						dateien[counter].size = atoi(groesse);
+						dateien[counter].semval[0] = (short) 10;
+						retcode = write(newsockfd,"CONTENT:\n",10);
+						retcode = read(newsockfd,buffer,255);
+						dateien[counter].content = (char*)calloc(dateien[counter].size,sizeof(char));
+						strcpy(dateien[counter].content,buffer);
+						message = "FILECREATED\n";
+					}
+					
+					retcode = write(newsockfd,message,strlen(message));
 					
 					if(retcode < 0)
 					{
@@ -272,13 +285,25 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"READ") == 0)
 				{
-					retcode = write(newsockfd,"OK\n",3);
 					int counter=0;
+					char *message;
 					
-					while(strcmp(dateiname,dateien[counter].name) != 0)
+					while(dateien[counter].name != NULL)
 					{
+						if(strcmp(dateien[counter].name,dateiname) == 0)
+						{
+							sprintf(message,"FILECONTENT %s %d\n%s\n",dateien[counter].name,dateien[counter].size,dateien[counter].content);
+							break;
+						}
+						else
+						{
+							message = "NOSUCHFILE\n";
+						}
 						counter++;
 					}
+					
+					
+					retcode = write(newsockfd,message,strlen(message));
 					
 					if(retcode < 0)
 					{

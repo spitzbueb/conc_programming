@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	{
 		fgets(buffer,256,stdin);
 		
-		n = write(sockfd, buffer, strlen(buffer));
+		n = write(sockfd,buffer,strlen(buffer));
 		
 		if(n<0)
 		{
