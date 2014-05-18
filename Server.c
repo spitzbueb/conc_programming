@@ -204,7 +204,6 @@ int main(int argc, char *argv[])
 			while(1)
 			{
 				
-				int zaehler = 0;
 				retcode = read(newsockfd, buffer, 255);
 				if(retcode < 0)
 				{
@@ -221,14 +220,31 @@ int main(int argc, char *argv[])
 				if(strcmp(befehl,"LIST") == 0)
 				{
 					int counter = 0;
+					int zaehler = 0;
+					char *temp;
+					char *message;
+					temp = (char*)calloc(sizeof(dateien),sizeof(char));
+					message = (char*)calloc(sizeof(dateien),sizeof(char));
 					
 					while(dateien[counter].name != NULL)
 					{
-						printf("%d\n",counter);
-						counter++;
+						if(strcmp(dateien[counter].name,"EMPTY") == 0)
+						{
+							counter++;
+						}
+						else
+						{
+							strcat(temp,dateien[counter].name);
+							strcat(temp,"\n");
+							zaehler++;
+							counter++;
+						}
 					}
 					
-	
+					sprintf(message,"ACK %d\n%s",zaehler,temp);					
+					
+					retcode = write(newsockfd,message,strlen(message));
+					
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
@@ -256,12 +272,23 @@ int main(int argc, char *argv[])
 						}
 					}
 					
+					
 					if(status == 1)
 					{
 						message = "FILEEXISTS\n";
 					}
 					else
 					{
+						counter=0;
+						while(dateien[counter].name != NULL)
+						{
+							if(strcmp(dateien[counter].name,"EMPTY") == 0)
+							{
+								break;
+							}
+							counter++;
+						}
+						
 						dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
 						strcpy(dateien[counter].name,dateiname);
 						dateien[counter].size = atoi(groesse);
@@ -287,13 +314,11 @@ int main(int argc, char *argv[])
 					int counter=0;
 					char message[256];
 												
-					printf("vor schlaufe\n");
 					while(dateien[counter].name != NULL)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
 							sprintf(message,"FILECONTENT %s %d\n%s\n",dateien[counter].name,dateien[counter].size,dateien[counter].content);
-							printf("Nach sprintf\n");
 							break;
 						}
 						else
@@ -305,7 +330,6 @@ int main(int argc, char *argv[])
 					
 					
 					retcode = write(newsockfd,message,strlen(message));
-					printf("Done\n");
 					message[0] = '\0';
 					if(retcode < 0)
 					{
@@ -315,46 +339,99 @@ int main(int argc, char *argv[])
 				}
 				else if(strcmp(befehl,"UPDATE") == 0)
 				{
-					retcode = write(newsockfd,"OK\n",3);
 					int counter = 0;
-					while(strcmp(dateiname,dateien[counter].name) != 0)
+					char *message;
+					while(dateien[counter].name != NULL)
 					{
+						if(strcmp(dateien[counter].name,dateiname) == 0)
+						{
+							dateien[counter].size = atoi(groesse);
+							strcpy(dateien[counter].content,"");
+							message = "CONTENT:\n";
+							break;
+						}
+						else
+						{
+							message = "NOSUCHFILE\n";
+						}
+						
 						counter++;
 					}
 					
-					retcode = read(newsockfd,buffer,255);
+					retcode = write(newsockfd,message,strlen(message));
+										
 					if(retcode < 0)
 					{
-						perror("ERROR READING SOCKET!\n");
+						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
-					dateien[counter].content = (char*)calloc(strlen(buffer),sizeof(char));
-					strcpy(dateien[counter].content,buffer);
-					retcode = write(newsockfd,"Gespeichert!\n",14);
+					
+					if(strcmp(message,"NOSUCHFILE\n") == 0)
+					{
+						
+					}
+					else
+					{
+						retcode = read(newsockfd,buffer,256);
+					
+						if(retcode < 0)
+						{
+							perror("ERROR READING SOCKET!\n");
+							exit(1);
+						}
+					
+						strcpy(dateien[counter].content,buffer);
+					
+						retcode = write(newsockfd,"UPDATED\n",9);
+					
+						if(retcode < 0)
+						{
+							perror("ERROR WRITING SOCKET!\n");
+							exit(1);
+						}
+					}
+				}
+				else if(strcmp(befehl,"DELETE") == 0)
+				{
+					int counter = 0;
+					char *message;
+					
+					while(dateien[counter].name != NULL)
+					{
+						if(strcmp(dateien[counter].name,dateiname) == 0)
+						{
+							strcpy(dateien[counter].name,"EMPTY");
+							strcpy(dateien[counter].content,"");
+							dateien[counter].size = 0;
+							message = "DELETED\n";
+							break;
+						}
+						else
+						{
+							message = "NOSUCHFILE\n";
+						}
+						
+						counter++;
+					}
+					
+					write(newsockfd,message,strlen(message));
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
 				}
-				else if(strcmp(befehl,"DELETE") == 0)
+				else if(strcmp(befehl,"LISTALL") == 0)
 				{
 					int counter = 0;
 					
-					while(strcmp(dateiname,dateien[counter].name) != 0)
+					while(dateien[counter].name != NULL)
 					{
+						printf("%s\n",dateien[counter].name);
 						counter++;
 					}
 					
-					strcpy(dateien[counter].name,"");
-					strcpy(dateien[counter].content,"");
-					
-					retcode = write(newsockfd,"Datei gelöscht!\n",17);
-					if(retcode < 0)
-					{
-						perror("ERROR WRITING SOCKET!\n");
-						exit(1);
-					}
+					write(newsockfd,"OK\n",3);
 				}
 				else
 				{
