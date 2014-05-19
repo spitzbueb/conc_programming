@@ -122,6 +122,8 @@ int main(int argc, char *argv[])
 	shmid_cleanup = shmid;
 	
 	struct datei *dateien = (struct datei *) shmat(shmid,NULL,0);
+	shmdt(dateien);
+	dateien = NULL;
 /* Ende Aufbau Shared-Memory */
 
 /* Aufbau Semaphore */
@@ -226,6 +228,8 @@ int main(int argc, char *argv[])
 					temp = (char*)calloc(sizeof(dateien),sizeof(char));
 					message = (char*)calloc(sizeof(dateien),sizeof(char));
 					
+					dateien = (struct datei *) shmat(shmid,NULL,0);
+					
 					while(dateien[counter].name != NULL)
 					{
 						if(strcmp(dateien[counter].name,"EMPTY") == 0)
@@ -234,6 +238,7 @@ int main(int argc, char *argv[])
 						}
 						else
 						{
+							printf("%s\n",dateien[counter].name);
 							strcat(temp,dateien[counter].name);
 							strcat(temp,"\n");
 							zaehler++;
@@ -251,6 +256,8 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
+					dateien = NULL;
+					
 					
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
@@ -259,14 +266,20 @@ int main(int argc, char *argv[])
 					int status = 0;
 					char *message;
 					
+					dateien = (struct datei *) shmat(shmid,NULL,0);
+					
+					printf("Vor Schlaufe\n");
 					while(dateien[counter].name != NULL)
 					{
+						printf("In Schleife\n");
 						if(strcmp(dateien[counter].name,dateiname) != 0)
 						{
+							printf("not Same\n");
 							counter++;
 						}
 						else
 						{
+							printf("same\n");
 							status = 1;
 							break;
 						}
@@ -300,6 +313,8 @@ int main(int argc, char *argv[])
 						message = "FILECREATED\n";
 					}
 					
+					shmdt(dateien);
+					
 					retcode = write(newsockfd,message,strlen(message));
 					
 					if(retcode < 0)
@@ -308,11 +323,15 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
+					dateien = NULL;
+					
 				}
 				else if(strcmp(befehl,"READ") == 0)
 				{
 					int counter=0;
 					char message[256];
+					
+					dateien = (struct datei *)shmat(shmid,NULL,0);
 												
 					while(dateien[counter].name != NULL)
 					{
@@ -336,11 +355,15 @@ int main(int argc, char *argv[])
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
+					
+					dateien = NULL;
 				}
 				else if(strcmp(befehl,"UPDATE") == 0)
 				{
 					int counter = 0;
 					char *message;
+					
+					dateien = (struct datei *)shmat(shmid,NULL,0);
 					while(dateien[counter].name != NULL)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
@@ -381,6 +404,8 @@ int main(int argc, char *argv[])
 						}
 					
 						strcpy(dateien[counter].content,buffer);
+						
+						shmdt(dateien);
 					
 						retcode = write(newsockfd,"UPDATED\n",9);
 					
@@ -390,11 +415,15 @@ int main(int argc, char *argv[])
 							exit(1);
 						}
 					}
+					
+					dateien = NULL;
 				}
 				else if(strcmp(befehl,"DELETE") == 0)
 				{
 					int counter = 0;
 					char *message;
+					
+					dateien = (struct datei *)shmat(shmid,NULL,0);
 					
 					while(dateien[counter].name != NULL)
 					{
@@ -414,12 +443,16 @@ int main(int argc, char *argv[])
 						counter++;
 					}
 					
+					shmdt(dateien);
+					
 					write(newsockfd,message,strlen(message));
 					if(retcode < 0)
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
+					
+					dateien = NULL;
 				}
 				else if(strcmp(befehl,"LISTALL") == 0)
 				{
