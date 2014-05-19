@@ -18,9 +18,9 @@
 
 struct datei
 {
-	char *name;
+	char name[256];
 	int size;
-	char *content;
+	char content[4096];
 	short semval[1];
 };
 
@@ -29,6 +29,7 @@ int shmid, shmid_cleanup;
 int semid, semid_cleanup;
 int sockfd, newsockfd;
 int x = 0;
+struct datei *dateien;
 
 const char *REF_FILE = "./shm_sem_ref.dat";
 
@@ -65,7 +66,7 @@ void cleanup()
 
 int create_shm(key_t key, const char *txt, const char *etxt)
 {
-	int result = shmget(key, 256, IPC_CREAT | IPC_EXCL | 0600);
+	int result = shmget(key, 1048576, IPC_CREAT | IPC_EXCL | 0600);
 	if (result < 0)
 	{
 		printf("%s", etxt);
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
 	shmid = create_shm(shmkey, "create","SHMGET FAILED!\n");
 	shmid_cleanup = shmid;
 	
-	struct datei *dateien = (struct datei *) shmat(shmid,NULL,0);
+	dateien = (struct datei *) shmat(shmid,NULL,0);
 /* Ende Aufbau Shared-Memory */
 
 /* Aufbau Semaphore */
@@ -223,13 +224,14 @@ int main(int argc, char *argv[])
 					int zaehler = 0;
 					char *temp;
 					char *message;
-					temp = (char*)calloc(sizeof(dateien),sizeof(char));
-					message = (char*)calloc(sizeof(dateien),sizeof(char));
-					
-					while(dateien[counter].name != NULL)
+					temp = (char*)malloc(sizeof(dateien));
+									
+					while((int) strlen(dateien[counter].name) != 0)
 					{
+						printf("Vor Vergleich\n");
 						if(strcmp(dateien[counter].name,"EMPTY") == 0)
 						{
+							printf("Found Empty\n");
 							counter++;
 						}
 						else
@@ -240,7 +242,12 @@ int main(int argc, char *argv[])
 							zaehler++;
 							counter++;
 						}
+						
+						printf("%d\n",counter);
 					}
+					printf("Done\n");
+					
+					message = (char*)malloc(10*counter*sizeof(temp));
 					
 					sprintf(message,"ACK %d\n%s",zaehler,temp);					
 					
@@ -251,6 +258,9 @@ int main(int argc, char *argv[])
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
 					}
+					
+					free(message);
+					free(temp);
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
 				{
@@ -258,23 +268,18 @@ int main(int argc, char *argv[])
 					int status = 0;
 					char *message;
 					
-					printf("Vor Schlaufe\n");
-					while(dateien[counter].name != NULL)
+					while((int) strlen(dateien[counter].name) != 0)
 					{
-						printf("In Schleife\n");
 						if(strcmp(dateien[counter].name,dateiname) != 0)
 						{
-							printf("not Same\n");
 							counter++;
 						}
 						else
 						{
-							printf("same\n");
 							status = 1;
 							break;
 						}
 					}
-					
 					
 					if(status == 1)
 					{
@@ -282,8 +287,9 @@ int main(int argc, char *argv[])
 					}
 					else
 					{
+						
 						counter=0;
-						while(dateien[counter].name != NULL)
+						while((int) strlen(dateien[counter].name) != 0)
 						{
 							if(strcmp(dateien[counter].name,"EMPTY") == 0)
 							{
@@ -292,13 +298,13 @@ int main(int argc, char *argv[])
 							counter++;
 						}
 						
-						dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
+						//dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
 						strcpy(dateien[counter].name,dateiname);
 						dateien[counter].size = atoi(groesse);
 						dateien[counter].semval[0] = (short) 10;
 						retcode = write(newsockfd,"CONTENT:\n",10);
 						retcode = read(newsockfd,buffer,255);
-						dateien[counter].content = (char*)calloc(dateien[counter].size,sizeof(char));
+						//dateien[counter].content = (char*)calloc(dateien[counter].size,sizeof(char));
 						strcpy(dateien[counter].content,buffer);
 						message = "FILECREATED\n";
 					}
@@ -309,14 +315,14 @@ int main(int argc, char *argv[])
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
-					}				
+					}	
 				}
 				else if(strcmp(befehl,"READ") == 0)
 				{
 					int counter=0;
 					char message[256];
 					
-					while(dateien[counter].name != NULL)
+					while((int) strlen(dateien[counter].name) != 0)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
@@ -345,7 +351,7 @@ int main(int argc, char *argv[])
 					int counter = 0;
 					char *message;
 					
-					while(dateien[counter].name != NULL)
+					while((int) strlen(dateien[counter].name) != 0)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
@@ -400,7 +406,7 @@ int main(int argc, char *argv[])
 					int counter = 0;
 					char *message;
 					
-					while(dateien[counter].name != NULL)
+					while((int) strlen(dateien[counter].name) != 0)
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
@@ -429,7 +435,7 @@ int main(int argc, char *argv[])
 				{
 					int counter = 0;
 					
-					while(dateien[counter].name != NULL)
+					while((int) strlen(dateien[counter].name) != 0)
 					{
 						printf("%s\n",dateien[counter].name);
 						counter++;
