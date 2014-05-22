@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 /* Ende Aufbau Shared-Memory */
 
 /* Aufbau Semaphore */
-	semkey = ftok(REF_FILE,2);
+	semkey = ftok(REF_FILE,1);
 	if(semkey < 0)
 	{
 		perror("ERROR FTOK SEMAPHOR!\n");
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 	}
 	
 	printf("Setting up Semaphor!\n");
-	semid = create_sem(semkey, 1, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
+	semid = create_sem(semkey, 10, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
 	semid_cleanup = semid;
 	short semval[1];
 	semval[0] = (short) 10;
@@ -236,25 +236,19 @@ int main(int argc, char *argv[])
 									
 					while((int) strlen(dateien[counter].name) != 0)
 					{
-						printf("Vor Vergleich\n");
 						if(strcmp(dateien[counter].name,"EMPTY") == 0)
 						{
-							printf("Found Empty\n");
 							counter++;
 						}
 						else
 						{
-							printf("%s\n",dateien[counter].name);
 							strcat(temp,dateien[counter].name);
 							strcat(temp,"\n");
 							zaehler++;
 							counter++;
 						}
-						
-						printf("%d\n",counter);
 					}
-					printf("Done\n");
-					
+								
 					message = (char*)malloc(10*counter*sizeof(temp));
 					
 					sprintf(message,"ACK %d\n%s",zaehler,temp);					
@@ -306,21 +300,15 @@ int main(int argc, char *argv[])
 							counter++;
 						}
 						
+						dateien[counter].semval[0] = (short) 10;
+						
 						//dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
 						strcpy(dateien[counter].name,dateiname);
 						dateien[counter].size = atoi(groesse);
-						dateien[counter].semval[0] = (short) 10;
 						retcode = write(newsockfd,"CONTENT:\n",10);
 						retcode = read(newsockfd,buffer,255);
 						//dateien[counter].content = (char*)calloc(dateien[counter].size,sizeof(char));
 						strcpy(dateien[counter].content,buffer);
-						
-						if(semctl(semid,1,SETALL,&dateien[counter].semval[0]) < 0)
-						{
-							printf("ERROR SEMCTL FOR FILE\n");
-						}
-						
-						
 						message = "FILECREATED\n";
 					}
 
@@ -341,16 +329,34 @@ int main(int argc, char *argv[])
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
-														if(semop(semid,&sem_one,1) < 0)
+							
+							if(semctl(semid,0,SETALL,&dateien[counter].semval[0]) < 0)
+							{
+								printf("ERROR SEMCTL FOR FILE\n");
+							}
+							
+							short temp = semctl(semid,0,GETVAL,0);
+							printf("SEMVAL: %d\n",temp);
+							
+							if(semop(semid,&sem_one,1) < 0)
 							{
 								printf("ERROR SEMOP FOR FILE\n");
 							}
+							
+							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+							printf("SEMVAL: %d\n", dateien[counter].semval[0]);
+							
 							sprintf(message,"FILECONTENT %s %d\n%s\n",dateien[counter].name,dateien[counter].size,dateien[counter].content);
-							break;
+														
 							if(semop(semid,&sem_one_undo,1) < 0)
 							{
-								printf("ERROR SEMOP FOR FILE\n");
+								printf("ERROR SEMOP_UNDO FOR FILE\n");
 							}
+							
+							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+							printf("SEMVAL: %d\n", dateien[counter].semval[0]);
+							
+							break;
 						}
 						else
 						{
@@ -378,10 +384,6 @@ int main(int argc, char *argv[])
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
-							if(semop(semid,&sem_all,1) < 0)
-							{
-								printf("ERROR SEMOP FOR FILE\n");
-							}
 							dateien[counter].size = atoi(groesse);
 							strcpy(dateien[counter].content,"");
 							message = "CONTENT:\n";
@@ -394,6 +396,23 @@ int main(int argc, char *argv[])
 						
 						counter++;
 					}
+					
+					if(semctl(semid,0,SETALL,&dateien[counter].semval[0]) < 0)
+					{
+						printf("ERROR SEMCTL FOR FILE\n");
+					}
+					
+					short temp = semctl(semid,0,GETVAL,0);
+					printf("SEMVAL: %d\n", temp);
+					
+					
+					if(semop(semid,&sem_all,1) < 0)
+					{
+						printf("ERROR SEMOP FOR FILE\n");
+					}
+					
+					dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+					printf("SEMVAL: %d\n", dateien[counter].semval[0]);
 					
 					retcode = write(newsockfd,message,strlen(message));
 										
@@ -420,18 +439,22 @@ int main(int argc, char *argv[])
 						strcpy(dateien[counter].content,buffer);
 						
 						retcode = write(newsockfd,"UPDATED\n",9);
-						
-						if(semop(semid,&sem_all_undo,1) < 0)
-						{
-							printf("ERROR SEMOP FOR FILE\n");
-						}
-					
+										
 						if(retcode < 0)
 						{
 							perror("ERROR WRITING SOCKET!\n");
 							exit(1);
 						}
 					}
+					
+					if(semop(semid,&sem_all_undo,1) < 0)
+					{
+						printf("ERROR SEMOP FOR FILE\n");
+					}
+					
+					dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+					printf("SEMVAL: %d\n", dateien[counter].semval[0]);
+
 				}
 				else if(strcmp(befehl,"DELETE") == 0)
 				{
