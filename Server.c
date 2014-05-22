@@ -335,16 +335,12 @@ int main(int argc, char *argv[])
 								printf("ERROR SEMCTL FOR FILE\n");
 							}
 							
-							short temp = semctl(semid,0,GETVAL,0);
-							printf("SEMVAL: %d\n",temp);
-							
 							if(semop(semid,&sem_one,1) < 0)
 							{
 								printf("ERROR SEMOP FOR FILE\n");
 							}
 							
 							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
-							printf("SEMVAL: %d\n", dateien[counter].semval[0]);
 							
 							sprintf(message,"FILECONTENT %s %d\n%s\n",dateien[counter].name,dateien[counter].size,dateien[counter].content);
 														
@@ -354,7 +350,6 @@ int main(int argc, char *argv[])
 							}
 							
 							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
-							printf("SEMVAL: %d\n", dateien[counter].semval[0]);
 							
 							break;
 						}
@@ -384,9 +379,21 @@ int main(int argc, char *argv[])
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
+							if(semctl(semid,0,SETALL,&dateien[counter].semval[0]) < 0)
+							{
+								printf("ERROR SEMCTL FOR FILE\n");
+							}
 							dateien[counter].size = atoi(groesse);
 							strcpy(dateien[counter].content,"");
 							message = "CONTENT:\n";
+							
+							if(semop(semid,&sem_all,1) < 0)
+							{
+								printf("ERROR SEMOP FOR FILE\n");
+							}
+							
+							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+							
 							break;
 						}
 						else
@@ -397,23 +404,6 @@ int main(int argc, char *argv[])
 						counter++;
 					}
 					
-					if(semctl(semid,0,SETALL,&dateien[counter].semval[0]) < 0)
-					{
-						printf("ERROR SEMCTL FOR FILE\n");
-					}
-					
-					short temp = semctl(semid,0,GETVAL,0);
-					printf("SEMVAL: %d\n", temp);
-					
-					
-					if(semop(semid,&sem_all,1) < 0)
-					{
-						printf("ERROR SEMOP FOR FILE\n");
-					}
-					
-					dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
-					printf("SEMVAL: %d\n", dateien[counter].semval[0]);
-					
 					retcode = write(newsockfd,message,strlen(message));
 										
 					if(retcode < 0)
@@ -422,11 +412,7 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
-					if(strcmp(message,"NOSUCHFILE\n") == 0)
-					{
-						
-					}
-					else
+					if(strcmp(message,"NOSUCHFILE\n") != 0)
 					{
 						retcode = read(newsockfd,buffer,256);
 					
@@ -445,16 +431,14 @@ int main(int argc, char *argv[])
 							perror("ERROR WRITING SOCKET!\n");
 							exit(1);
 						}
-					}
+						
+						if(semop(semid,&sem_all_undo,1) < 0)
+						{
+							printf("ERROR SEMOP FOR FILE\n");
+						}
 					
-					if(semop(semid,&sem_all_undo,1) < 0)
-					{
-						printf("ERROR SEMOP FOR FILE\n");
+						dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
 					}
-					
-					dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
-					printf("SEMVAL: %d\n", dateien[counter].semval[0]);
-
 				}
 				else if(strcmp(befehl,"DELETE") == 0)
 				{
@@ -465,10 +449,29 @@ int main(int argc, char *argv[])
 					{
 						if(strcmp(dateien[counter].name,dateiname) == 0)
 						{
+							if(semctl(semid,0,SETALL,&dateien[counter].semval[0]) < 0)
+							{
+								printf("ERROR SEMCTL FOR FILE\n");
+							}
+							
+							if(semop(semid,&sem_all,1) < 0)
+							{
+								printf("ERROR SEMOP FOR FILE\n");
+							}
+					
+							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
 							strcpy(dateien[counter].name,"EMPTY");
 							strcpy(dateien[counter].content,"");
 							dateien[counter].size = 0;
 							message = "DELETED\n";
+							
+							if(semop(semid,&sem_all_undo,1) < 0)
+							{
+								printf("ERROR SEMOP FOR FILE\n");
+							}
+					
+							dateien[counter].semval[0] = semctl(semid,0,GETVAL,0);
+							
 							break;
 						}
 						else
