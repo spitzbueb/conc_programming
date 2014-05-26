@@ -58,9 +58,9 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 		
-		bzero(buffer,256);
+		bzero(buffer,500);
 		
-		n = read(sockfd, buffer, 255);
+		n = read(sockfd, buffer, 256);
 		if(n<0)
 		{
 			printf("ERROR READING SOCKET!\n");

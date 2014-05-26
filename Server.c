@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
 					int counter = 0;
 					int zaehler = 0;
 					char *temp;
-					char *message;
+					char message[5000];
 					temp = (char*)malloc(sizeof(dateien));
 									
 					while((int) strlen(dateien[counter].name) != 0)
@@ -248,11 +248,9 @@ int main(int argc, char *argv[])
 							counter++;
 						}
 					}
-								
-					message = (char*)malloc(10*counter*sizeof(temp));
 					
-					sprintf(message,"ACK %d\n%s",zaehler,temp);					
-					
+					sprintf(message,"ACK %d\n%s",zaehler,temp);	
+										
 					retcode = write(newsockfd,message,strlen(message));
 					
 					if(retcode < 0)
@@ -261,8 +259,8 @@ int main(int argc, char *argv[])
 						exit(1);
 					}
 					
-					free(message);
-					free(temp);
+					temp[0] = '\0';
+					message[0] = '\0';
 				}
 				else if(strcmp(befehl,"CREATE") == 0)
 				{
