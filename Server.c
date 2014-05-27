@@ -136,8 +136,6 @@ int main(int argc, char *argv[])
 	printf("Setting up Semaphor!\n");
 	semid = create_sem(semkey, 10, "create", "SEMAPHOR FAILED!\n", IPC_CREAT);
 	semid_cleanup = semid;
-	short semval[1];
-	semval[0] = (short) 10;
 	
 	struct sembuf sem_one, sem_all, sem_one_undo, sem_all_undo;
 	
@@ -316,7 +314,7 @@ int main(int argc, char *argv[])
 					{
 						perror("ERROR WRITING SOCKET!\n");
 						exit(1);
-					}	
+					}
 				}
 				else if(strcmp(befehl,"READ") == 0)
 				{
