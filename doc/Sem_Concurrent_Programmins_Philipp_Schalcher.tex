@@ -93,6 +93,7 @@ Als zweites Problem sehe ich die Speicherung der "Dateien". Hier würde ich so v
 Als drittes Problem ist die Sperrung der Dateien ein zentraler Punkt. Da für den Server keine globalen Sperren genutzt werden dürfen, würde ich Semaphore einsetzen, die die einzelnen Codeteile sperren und so von Prozessen nicht gleichzeitig ausgeführt werden können. Der Semaphor an sich muss aber mehr als ein "Ticket" vergeben können, da zum Beispiel READ mehrfach ausgeführt werden darf. Allerdings muss ein DELETE den kompletten Semaphor besetzen, damit keine anderen Operationen durchgeführt werden können.
 Auch hier gilt wieder, das mit der Semaphorengrösse auch die Anzahl Clients beschränkt wird. So können bei einem Semaphor mit 10 Tickets maximal 10 Clients gleichzeitig einen READ durchführen. Auch wenn 20 Clients verbunden wären, so würden doch immer nur 10 bedient werden.
 \chapter{Realisierung}
+Im ersten Abschnitt des Quellcodes (nur eine Zeile) wird die Eingabe von CTRL+C abgefangen, damit Semaphore, Shared Memory und der Netzwerkteil sauber geschlossen werden. Danach folgt der Aufbau des Shared-Memory. Über eine Referenzdatei wird der Shared Memory Key generiert, welcher shmget benutzt, um das Memory aufzubauen. Das Struktur-Array wird schlussendlich mit dem Shared Memory verknüpft.
 \section{Netzwerk}
 \subsection{Testing}
 \chapter{Schwierigkeiten}
