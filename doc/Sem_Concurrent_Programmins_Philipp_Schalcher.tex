@@ -74,6 +74,8 @@ Beispiel: DELETE meineErsteDatei
 \section{LIST}
 Syntax: LIST
 LIST veranlasst den Server dazu, alle Dateien zu zählen und deren Namen an den Client zu senden.
+\section{Beschränkung}
+Durch den Einsatz der Semaphore ist der Server momentan auf maximal 10 gleichzeitige Read-Vorgänge eingeschränkt. Dies könnte mit grösseren Semaphor verändert werden. Da aber keine Angaben im Auftrag gemacht wurden, werde ich die Einstellung in diesem Zustand belassen.
 \chapter{Ausgangslage}
 Auf Wunsch des Dozenten in Concurrent Programming soll entweder ein Datei-Server oder ein Mehrbenutzereditor in C programmiert werden. Diese Arbeit behandelt die Aufgabe mit dem Datei-Server. Dabei muss der Server gewisse Bedingungen erfüllen. Diese wären:
 \begin{itemize}
@@ -93,9 +95,59 @@ Als zweites Problem sehe ich die Speicherung der "Dateien". Hier würde ich so v
 Als drittes Problem ist die Sperrung der Dateien ein zentraler Punkt. Da für den Server keine globalen Sperren genutzt werden dürfen, würde ich Semaphore einsetzen, die die einzelnen Codeteile sperren und so von Prozessen nicht gleichzeitig ausgeführt werden können. Der Semaphor an sich muss aber mehr als ein "Ticket" vergeben können, da zum Beispiel READ mehrfach ausgeführt werden darf. Allerdings muss ein DELETE den kompletten Semaphor besetzen, damit keine anderen Operationen durchgeführt werden können.
 Auch hier gilt wieder, das mit der Semaphorengrösse auch die Anzahl Clients beschränkt wird. So können bei einem Semaphor mit 10 Tickets maximal 10 Clients gleichzeitig einen READ durchführen. Auch wenn 20 Clients verbunden wären, so würden doch immer nur 10 bedient werden.
 \chapter{Realisierung}
-Im ersten Abschnitt des Quellcodes (nur eine Zeile) wird die Eingabe von CTRL+C abgefangen, damit Semaphore, Shared Memory und der Netzwerkteil sauber geschlossen werden. Danach folgt der Aufbau des Shared-Memory. Über eine Referenzdatei wird der Shared Memory Key generiert, welcher shmget benutzt, um das Memory aufzubauen. Das Struktur-Array wird schlussendlich mit dem Shared Memory verknüpft.
-\section{Netzwerk}
-\subsection{Testing}
-\chapter{Schwierigkeiten}
+In diesem Kapitel werde ich auf die Realisierung eingehen. Ein kurzer Abschnitt handelt von meiner Vorgehensweise und wie ich den Server aufgebaut habe. Schwerpunkt wird allerdings auf den Bereich \textquotedblleft Schwierigkeiten\textquotedblright und \textquotedblleft Testing\textquotedblright gelegt.
+\section{Implementation}
+Der ganze Server ist in einem C-Sourcefile zu finden. Der Aufbau ist relativ einfach:
+\begin{itemize}
+	\item Includes der Bibliotheken
+	\item Globale Variablen definieren
+	\item Funktionen definieren
+	\item Main-Funktion definition
+		\begin{itemize}
+		\item Erstellung des Signal-Handler
+		\item Erstellung des Shared-Memory
+		\item Erstellung des Semaphore
+		\item Aufbau des Netzwerkteils
+		\item Abfangen von Verbindungsanfragen und Prozesserstellung
+			\begin{itemize}
+			\item Abfangen des LIST-Befehls
+			\item Abfangen des CREATE-Befehls
+			\item Abfangen des READ-Befehls
+			\item Abfangen des UPDATE-Befehls
+			\item Abfangen des DELETE-Befehls
+			\end{itemize}
+		\end{itemize}
+\end{itemize}
+Die komplette Logik ist in den Bereichen der Befehlsabfragen zu finden. Die Dateien werden in einer definierten Struktur gespeichert, welche als Array auf das Shared-Memory gelegt wird. Sobald ein freier Platz oder eine bestimmte Datei gesucht werden muss, durchläuft das Array eine Schlaufe bis die Länge des String im Namen gleich 0 ist. So wissen wir, dass wir die letzte Position erreicht haben. Wie die Befehle genau implementiert sind, wird in den folgenden Abschnitten erklärt.
+\subsection{Implementation LIST}
+Für den Befehl List, wird das Array durchgelaufen und die Anzahl gefundenen Dateien gezählt. Da auch Einträge mit Namen \textquotedblleft EMPTY\textquotedblright vorkommen können (mehr dazu im Kapitel \textquotedblleft Implementation DELETE\textquotedblright), werden diese ignoriert. Die korrekten Dateinamen werden an einen vorhanden String angehängt. Ist die letzte Position im Array erreicht, wird die Nachricht generiert und an den Client gesendet. Danach steht der Server wieder für die nächste Eingabe zur Verfügung.
+\subsection{Implementation CREATE}
+Das Array wird wieder durchgegangen bis das Ende erreicht ist (wieder über die Längenprüfung von Name) oder ein Eintrag mit \textquotedblleft EMPTY\textquotedblright gefunden wird. Ist der vorgegebene Dateiname schon vorhanden, bricht der Vorgang ab. Ansonsten wird der Name, die Grösse, der Semaphorwert gesetzt und der Client wird nach dem Inhalt gefragt. Der Client muss den Inhalt eingeben, welcher dann im Feld Content gespeichert wird.
+\subsection{Implementation READ}
+Das Array wird nach dem angegebenen Namen durchsucht. Wird kein Eintrag gefunden, erhält man ein \textquotedblleft NOSUCHFILE\textquotedblright . Ansonsten holt sich der Prozess ein Semaphorticket und liest den Inhalt. Der Inhalt wird dann an den Client gesendet. Zum Abschluss gibt der Prozess das Semaphorticket wieder zurück. Sind alle Tickets verbraucht, wartet der Prozess bis eines frei wird.
+\subsection{Implementation UPDATE}
+Der erste Teil ist gleich wie im READ-Bereich. Ist das spezifische File gefunden, werden zuerst alle Semaphortickets reserviert, dann die Grösse und der Inhalt auf Leer geändert. Der Server fragt danach wieder den Client an, um den Inhalt zu erhalten. Sobald der Client den Inhalt generiert hat und zurückgegeben wurde, speichert der Server die Werte im Feld Content. Danach werden die Semaphortickets zurückgegeben. Solange UPDATE aktiv ist, kann kein READ, DELETE oder UPDATE durchgeführt werden.
+\subsection{Implementation DELETE}
+Falls bei einem Löschvorgang der Name auf NULL gesetzt wird, erhält das Array einen zweiten Punkt, wo die Stringlänge ebenfalls gleich 0 ist. Daraus folgt, dass das Array nicht mehr komplett durchgelaufen werden kann. Daher wird der Name nur auf \textquotedblleft EMPTY\textquotedblright gesetzt. So ist garantiert, dass das Array immer komplett durchgelaufen werden kann. Die restlichen Einträge werden auf NULL, 0 oder leer gesetzt.
+\subsection{Implementation Semaphor}
+Im Array enthält jeder Eintrag eine Variable semval. Diese beinhaltet die maximalen Tickets für eine Datei. In den einzelnen Befehlsbereichen wird bei der Ausführung der Wert ausgelesen und per semctl in den Semaphor geladen. Danach holt sich der Prozess ein oder alle Tickets per semop. Sobald der kritische Bereich ausgeführt ist, wird das reservierte Ticket frei gegeben.
+\begin{figure}[h!]
+\centering
+\includegraphics[width=10cm]{img/semaphore.png}
+\caption{Semaphor sperrt Ressource für Threads\protect\footnotemark}
+\end{figure}
+\footnotetext{Quelle: \url{http://www.mbed.org}}
+\section{Schwierigkeiten}
+In diesem Abschnitt möchte ich auf einige Probleme eingehen, die bei der Erstellung des Servers aufgetreten sind. Im Anschluss zu den jeweiligen Problemen wird meine Lösung angegeben.
+\subsection{Struktur Datei}
+In der Struktur Datei werden die Informationen zu den Dateien gespeichert. Hier gab es 2 grosse Entscheidungen bei der Implementation. Das erste Problem bestand in der Definition von der Variable Name und Content. Sind diese als undefinierte Arrays von Chars deklariert, zeigt der nächste Eintrag im Strukturarray auf den gleichen Speicher, wie der vordere. So entstand das Problem, dass ein zweiter Eintrag den Namen des ersten Eintrages änderte. Dies ging so weiter für jeden weiteren Eintrag in der Struktur.\\
+\\
+Das zweite Problem lag beim Durchsuchen. Der Name im Array wurde als Referenz genutzt. Der Durchlauf per Schlaufe lief mit der Prüfung auf NULL aber nur schlecht durch. Auch funktionierte er teilweise nicht, so dass das Programm hängen blieb und nicht mehr reagieren konnte.
+\subsubsection{Lösung}
+Problem 1 kam aus der Eigenschaft des undefiniertem Array. Der Speicher des Namensvariable zeigt für alle Einträge im Strukturarray auf die gleiche Adresse. So entstand die Eigenschaft, dass jeder weitere Eintrag den Namen auf die vorhergehenden Einträge vererbte. Die Lösung war, dass der Name nicht mehr eine undefinierte Länge besitzt, sondern das Char-Array von Beginn an auf eine bestimmte Grösse definiert wurde.\\
+\\
+Problem 2 lies den Server an einer bestimmten Stelle einfrieren. Dieser Effekt war aber nicht voraussagbar, da er nur sporadisch auftrat. Die Änderung der while-Schleife auf die Prüfung der Stringlänge behob dieses Problem. 
+\subsection{Generierung Messages}
+
 \chapter{Fazit}
 \end{document}

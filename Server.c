@@ -28,7 +28,6 @@ key_t shmkey, semkey;
 int shmid, shmid_cleanup;
 int semid, semid_cleanup;
 int sockfd, newsockfd;
-int x = 0;
 struct datei *dateien;
 
 const char *REF_FILE = "./shm_sem_ref.dat";
@@ -298,12 +297,10 @@ int main(int argc, char *argv[])
 						
 						dateien[counter].semval[0] = (short) 10;
 						
-						//dateien[counter].name = (char*)calloc(strlen(dateiname),sizeof(char));
 						strcpy(dateien[counter].name,dateiname);
 						dateien[counter].size = atoi(groesse);
 						retcode = write(newsockfd,"CONTENT:\n",10);
 						retcode = read(newsockfd,buffer,255);
-						//dateien[counter].content = (char*)calloc(dateien[counter].size,sizeof(char));
 						strcpy(dateien[counter].content,buffer);
 						message = "FILECREATED\n";
 					}
