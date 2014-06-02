@@ -148,6 +148,27 @@ Problem 1 kam aus der Eigenschaft des undefiniertem Array. Der Speicher des Name
 \\
 Problem 2 lies den Server an einer bestimmten Stelle einfrieren. Dieser Effekt war aber nicht voraussagbar, da er nur sporadisch auftrat. Die Änderung der while-Schleife auf die Prüfung der Stringlänge behob dieses Problem. 
 \subsection{Generierung Messages}
-
+Es trat das Problem auf, dass bei die Rückmeldungen (besonders bei der Funktion LIST) nicht korrekt in die Stringvariable geschrieben wurde. Im schlimmsten Fall blieb der Server an einem bestimmten Punkt bei der Ausführung stecken.
+\subsubsection{Lösung}
+Zwei verschiedene Lösungen hatten sich bei der Implementierung angeboten. Da der Inhalt meistens mit strcpy oder strcat gebaut werden, lag das Problem bei der Vorbereitung des Speichers. Bei der ersten Variante setzte ich für die Speicherreservierung ein malloc() ein. Allerdings funktionierte diese Lösung nur begrenzt. Die Nachricht wurde, aufgrund der Grösse bei mehreren Dateien, nicht mehr anzeigbar. Die letzten Dateien wurden nicht mehr in den String eingefügt. Anpassen der Grösse bei malloc() hat leider nicht zum gewünschte Erfolg geführt. So stellte ich die Nachrichtenvariable auf eine feste Grösse um. So wurde der Speicher reserviert und alle Dateien konnten angezeigt werden. Je nach Grösse der Dateiliste kann auch hier dieses Problem wieder auftauchen.
+\newpage
+\subsection{Semaphore und Dateien}
+Da die Semaphorwerte in der Struktur der Datei gespeichert werden und für jede Operation ausgelesen werden muss, wird auch immer der Befehl semctl() ausgeführt. So entstand das Problem, dass bei mehrfachen Zugriff die Werte immer wieder zurückgesetzt wurde. So hatte der Semaphor den Wert 10 beim Start, nach dem ersten semop() des UPDATES wurde er 0. Ein READ-Befehl setzte hingegen den Wert des Semaphors wieder auf 10. So sperrte zwar der Semaphor, wurde aber automatisch erhöht und dadurch umgangen.
+\subsubsection{Lösung}
+Der Wert aus dem Semaphor soll wieder zurück in die Datei geschrieben werden. Der Wert der Variable ändert sich während der Laufzeit und passt sich an. Werden 10 Plätze reserviert, so steht in der Variable in der Struktur auch der Wert 0 danach. Ein zweiter Prozess liesst diese vor semctl() aus und erhält so den aktuellen Semaphorwert. Einzelne Dateien werden so gesperrt, ohne dass andere Dateien beeinträchtigt sind.
+\section{Testing}
+Das Testing wurde während des Entwicklungsprozesses in den Fokus gelegt. Die Tests wurden manuell durchgeführt mit dem Binary test. Das Binary wechselt ausschliesslich zwischen read() und write() per TCP. Der Server musste sich dementsprechend anpassen.
+\subsection{Test 1: Netzwerk}
+Der erste Test kümmerte sich nur um die Verbindung zum Server. Er war erfolgreich, sobald ein Client (test) verbinden konnte. Dies klappte reibungslos.
+\subsection{Test 2: Fork}
+Der zweite Test überprüfte das Handling von mehreren Clients. Nachdem der fork() in den Server eingebaut wurde, testete ich mit 4 Clients einen gleichzeitigen Zugriff. Dies funktionierte und die Prozesse des Servers kümmerten sich um die Clients.
+\subsection{Test 3: Befehlsabfrage}
+Durch strtok wird der übermittelte String aufgeteilt. So konnte ich vergleichen, welchen Befehl der User abgesetzt hat. Der Test lief daraus hinaus, dass bei der erfolgreichen Erkennung eine Nachricht ausgegeben wurde.
+\subsection{Test 4: Dateioperationen}
+Nach der Implementation der Befehle testete ich die einzelnen Befehle mit dem Client. Dabei galt, dass mehrere Dateien erstellt (maximal 10 gestestet), gelesen, aktualisiert und gelöscht werden mussten. Dieser Test brauchte mehr Zeit, da immer wieder kleine Änderungen am Code vorgenommen werden mussten. Daher ging ich so vor, jeden Befehl einzeln zu implementieren, zu testen. Erst als die Befehle funktionierten, ging ich zum nächsten über. Als Letztes kümmerte ich mich um LIST. So konnte ich sicherstellen, dass die Befehle korrekt arbeiten.
+\subsection{Test 5: Shared Memory}
+Für diesen Test benutzte ich zwei Clients, die sich mit dem Server verbinden. Danach erstellte ich einige Dateien. Nun wechselte ich in den zweiten Client und verband mit dem Server. Mit dem Befehl LIST musste ich nun als erfolgreiches Ergebnis die Dateinamen erhalten. 
+\subsection{Test 6: Semaphor}
+Als letzten Test betrachtete ich die Sperrung der Dateien. Auch hier verband ich wieder zwei Clients mit dem Server und erstellte einige Dateien. Nun musste Client 1 ein UPDATE auf eine Datei ausführen. Da der Client nach dem Befehl den Inhalt verlangt, kann ich dadurch eine Datei auf unbestimmte Zeit sperren. Während Client 1 die Eingabe abwartete, versuchte ich ein READ im Client 2 auf die gleiche Datei auszuführen. Nach meiner Idee sollte nun beim READ nicht passieren, bis in Client 1 der Inhalt eingefügt wurde. Da ich nur mit UPDATE eine Sperre bauen konnte, habe ich die Schlussfolgerungen aus den Tests analog auf die restlichen Befehle übertragen.
 \chapter{Fazit}
 \end{document}

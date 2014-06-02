@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 					int counter = 0;
 					int status = 0;
 					char *message;
-					
+										
 					while((int) strlen(dateien[counter].name) != 0)
 					{
 						if(strcmp(dateien[counter].name,dateiname) != 0)

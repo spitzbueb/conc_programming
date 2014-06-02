@@ -21,4 +21,14 @@
 \contentsline {subsection}{\numberline {3.2.1}Struktur Datei}{8}
 \contentsline {subsubsection}{L\IeC {\"o}sung}{9}
 \contentsline {subsection}{\numberline {3.2.2}Generierung Messages}{9}
-\contentsline {chapter}{\numberline {4}Fazit}{10}
+\contentsline {subsubsection}{L\IeC {\"o}sung}{9}
+\contentsline {subsection}{\numberline {3.2.3}Semaphore und Dateien}{10}
+\contentsline {subsubsection}{L\IeC {\"o}sung}{10}
+\contentsline {section}{\numberline {3.3}Testing}{10}
+\contentsline {subsection}{\numberline {3.3.1}Test 1: Netzwerk}{10}
+\contentsline {subsection}{\numberline {3.3.2}Test 2: Fork}{10}
+\contentsline {subsection}{\numberline {3.3.3}Test 3: Befehlsabfrage}{10}
+\contentsline {subsection}{\numberline {3.3.4}Test 4: Dateioperationen}{11}
+\contentsline {subsection}{\numberline {3.3.5}Test 5: Shared Memory}{11}
+\contentsline {subsection}{\numberline {3.3.6}Test 6: Semaphor}{11}
+\contentsline {chapter}{\numberline {4}Fazit}{12}
