@@ -22,7 +22,7 @@
 \chapter*{Danksagung}
 \tableofcontents
 \begin{abstract}
-
+Gleichzeitige Nutzung eines Serverprogramms  ist ein zentraler Aspekt des Servers. Daher muss das Programm sicherstellen, dass Ressourcen verfügbar sind oder nicht. In unserem Fall dreht sich alles um einen Dateiserver. Dieser soll sich um die Grundoperationen kümmern. Die Grundoperationen sind CREATE, READ, UPDATE, DELETE, LIST. Da jede Operation auf eine Datei von zwei Prozessen durchgeführt werden könnte, werden die Dateien gesperrt.
 \end{abstract}
 \chapter*{Einleitung}
 Ein wichtiger Teil der Systemprogrammierung ist das Concurrent Programming. Dabei steht nicht die Parallelisierung im Vordergrund, sondern das Problem, von Zugriffen auf Ressourcen und die damit auftretenden Schwierigkeiten. Gleichzeitige Bearbeitungen von Ressourcen können, je nach ausgeführter Arbeit, zu schwerwiegenden Problemen führen. Wird zum Beispiel eine Datei gelöscht, obwohl die Datei momentan an einem anderen Ort geöffnet ist und das System dies nicht bemerkt, tritt ein Konflikt auf. Soll die Datei nun gelöscht werden und der Bearbeiter verliert den Zugriff, oder soll die Datei einfach nicht gelöscht werden, mit dem Vermerk, dass die Datei geöffnet ist?
