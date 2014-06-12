@@ -20,9 +20,22 @@
 %\maketitle
 \input{./title.tex}
 \chapter*{Danksagung}
+Ich möchte mich an dieser Stelle bei allen bedanken, die mich bei dieser Arbeit tatkräftig unterstützt haben.\\
+\\
+An erster Stelle bedanke ich mich bei Frau Ruxandra Domenig. Das spannende Thema zum Thema Information Retrieval entstand aus einem Beispiel. Sie motivierte mich, die Aufgabe noch mit einen kleinen theoretischen Teil über Musiksuche zu erweitern.\\
+\\
+An zweiter Stelle bedanke ich mich bei Herr Karl Brodowsky, unserem Dozenten im Bereich Systemsoftware. Seine C-Kenntnisse haben mir einige Male aus der Klemme geholfen. Seine Tipps zu Problemen haben mich oft auf den richtigen Pfad geführt. Ohne ihn wäre das Programm wohl nicht lauffähig gewesen.\\
+\\
+Dann möchte ich Ramona Heiz und Yvonne Schalcher danken, welche mir als Lektoren gedient haben. Ohne sie wäre dieses Dokument wahrscheinlich unlesbar geworden. Geduldig arbeiteten sie sich durch das Dokument vor und halfen mir das Bestmögliche hervorzubringen. Danke für eure Geduld und Arbeit.
 \tableofcontents
 \begin{abstract}
-Gleichzeitige Nutzung eines Serverprogramms  ist ein zentraler Aspekt des Servers. Daher muss das Programm sicherstellen, dass Ressourcen verfügbar sind oder nicht. In unserem Fall dreht sich alles um einen Dateiserver. Dieser soll sich um die Grundoperationen kümmern. Die Grundoperationen sind CREATE, READ, UPDATE, DELETE, LIST. Da jede Operation auf eine Datei von zwei Prozessen durchgeführt werden könnte, werden die Dateien gesperrt.
+Gleichzeitige Nutzung eines Serverprogramms  ist ein zentraler Aspekt des Servers. Daher muss das Programm sicherstellen, dass Ressourcen verfügbar sind oder nicht. In unserem Fall dreht sich alles um einen Dateiserver. Dieser soll sich um die Grundoperationen kümmern. Die Grundoperationen sind CREATE, READ, UPDATE, DELETE, LIST. Da jede Operation auf eine Datei von zwei Prozessen durchgeführt werden könnte, werden die Dateien gesperrt.\\
+\\
+Für jeden Client, der mit dem Server verbindet, wird ein neuer Prozess erstellt, der diesen Client bedient. Dadurch wird gewährleistet, dass mehrere Zugriffe gleichzeitig stattfinden können. Die Dateien selber werden in ein Shared-Memory gespeichert. So wird sichergestellt, dass die einzelnen Prozesse Zugriff auf die Dateien haben. Im Gegensatz zu Prozessen mit pthreads, muss bei fork ein Shared-Memory eingesetzt werden. fork teilt die Ressourcen nicht automatisch unter den Prozessen.\\
+\\
+Da nun einzelne Clients Operationen ausführen, wird die entsprechende Datei gesperrt, die gerade benutzt wird. Die trifft für LIST und CREATE nicht zu. Bei READ, UPDATE und DELETE wird der Semaphorwert aus der Datei ausgelesen und dementsprechend verwendet. So wird garantiert, dass kein Client eine Datei lesen kann, während ein anderer Client die Datei momentan aktualisiert.\\
+\\
+Verschiedene Herausforderungen sind während der Arbeit aufgetreten. Dabei kam es vom zu kleine Speicherbereich bis zu konzeptionellen Entscheidungen. Als Beispiel für den zu kleinen Speicherbereich sei das Shared-Memory erwähnt. Dieses muss bei der Erstellung mit einer angemessenen Grösse bestückt werden, da sonst nicht genug Dateien erstellt werden können. Für den konzeptionellen Teil ist der Semaphor beispielgebend. In der ersten Version wurde ein einziger Semaphorwert genutzt. Allerdings kollidierte diese Lösung mit der Idee, dass verschiedene Dateien einander nicht beeinflussen. Auch wäre so ein globaler Lock entstanden, welcher von der Aufgabenstellung verboten wurde. Daher wurde ein Semaphorwert zu jeder Datei hinzugefügt. Das Problem löste sich und ein UPDATE auf eine Datei 1 hatte keinen Einfluss mehr auf ein READ der Datei 2.
 \end{abstract}
 \chapter*{Einleitung}
 Ein wichtiger Teil der Systemprogrammierung ist das Concurrent Programming. Dabei steht nicht die Parallelisierung im Vordergrund, sondern das Problem, von Zugriffen auf Ressourcen und die damit auftretenden Schwierigkeiten. Gleichzeitige Bearbeitungen von Ressourcen können, je nach ausgeführter Arbeit, zu schwerwiegenden Problemen führen. Wird zum Beispiel eine Datei gelöscht, obwohl die Datei momentan an einem anderen Ort geöffnet ist und das System dies nicht bemerkt, tritt ein Konflikt auf. Soll die Datei nun gelöscht werden und der Bearbeiter verliert den Zugriff, oder soll die Datei einfach nicht gelöscht werden, mit dem Vermerk, dass die Datei geöffnet ist?
@@ -178,4 +191,36 @@ Mehr Arbeit hat die Befehlsabfrage abverlangt. Da Befehle wie strtok mir nicht b
 Als grosse Herausforderung hat sich der Einbau der Semaphoren herausgestellt. Mein erster Ansatz, mit einem Semaphorwert stellte sich als suboptimal heraus. So hätten sich zwei verschiedene Dateien auch gesperrt, auch wenn das nicht nötig wäre. Daher änderte ich die Wertzuweisung so, dass jede Datei eine eigene Variable enthält, welche den Semaphorwert speichert. Aus diesem Grund muss auch der Semaphorwert nach jeder Operation wieder in die Variable geschrieben werden. Ebenfalls muss der Wert vor jeder Operation wieder aus der Variable in den Semaphorteil geladen werden. Diese Lösung mag umständlich sein, aber ist für meine Kenntnisse die zuverlässigste.\\
 \\
 Das Projekt war sehr interessant. Es gab mir die Möglichkeit, viel über die Programmierung mit C zu lernen. Die Aufgabenstellung mit dem File-Server war gut vorstellbar und brachte meiner Meinung nach den Vorteil, dass die Vorgaben zum Concurrent Programming klar verständlich waren. Ein gutes Beispiel oder eine bildliche Darstellung hilft meistens mehr, einen Auftrag zu verstehen, als diesen nur in theoretischer Form zu erhalten.
+\chapter*{Glossar}
+\textbf{Semaphor}\\
+Ist eine Struktur, die dazu dient, Ressourcen während der Ausführung zu Sperren. Sie funktioniert nach dem Schema, dass ein Ticket für eine Operation geholt werden muss, und am Ende zurückgegeben wird. Falls kein Ticket vorhanden ist, wird keine Operation ausgeführt.\\
+\\
+\textbf{Shared-Memory}\\
+Ein Teil des RAM wird für die Datenspeicherung reserviert. Auf diesen Speicherbereich hat jeder Prozess Zugriff. Shared-Memory ist ein wichtiger Teil in der Interprozesskommunikation.\\
+\\
+\textbf{SEGV}\\
+Steht für Segmentation Fault oder Segmentation Violation. Es handelt sich hierbei um einen Fehler während der Ausführung, wenn zum Beispiel auf einen Speicher zugegriffen werden will, welcher gesperrt oder nicht verfügbar ist. \\
+\\
+\textbf{Sockets}\\
+Sockets sind dazu da, dass Computer miteinander Daten austauschen und kommunizieren können. \\
+\\
+\textbf{fork / pthread}\\
+Stehen für zwei verschiedene Methoden, wie aus einem Programm ein weiterer Prozess erzeugt werden kann. Der neu erzeugt Prozess wird als Kindprozess bezeichnet, während der Erzeuger als Vaterprozess betitelt wird.\\
+\\
+\textbf{String}\\
+Ist eine Variable, die ausschliesslich Text beinhaltet. In C existieren diese nicht wie bei Java. Daher werden sie als ein Array von einzelnen Zeichen (Char) aufgebaut.\\
+\\
+\textbf{Array}\\
+Ein Array ist eine Ansammlung von Werten des gleichen Types. Wichtig ist dabei, dass mehrere Werte in einem Array gespeichert werden können. Diese Arrays können dann durchlaufen werden, um einzelne Einträge zu erhalten.
+\bibliography{document}
+\bibliographystyle{plain}
+\nocite{socketserver}
+\nocite{fork1}
+\nocite{fork2}
+\nocite{socketclient}
+\nocite{stcmp}
+\nocite{substring}
+\nocite{gitbk}
+\nocite{semctl}
+\nocite{unix_environment}
 \end{document}
